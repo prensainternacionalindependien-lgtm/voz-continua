@@ -25,6 +25,15 @@
 </section>
 <section class="card script"><div class="titleline"><h2><label for="script">Tu texto</label></h2><span id="count">0 caracteres</span></div>
 <p>Pega tu texto completo. La app se encarga de dividirlo.</p><textarea id="script" placeholder="Escribe o pega aquí lo que quieres escuchar…" spellcheck="true" lang="es"></textarea>
+<details class="translate"><summary>Traducir al español</summary>
+<label for="source-language">Idioma del texto original</label>
+<select id="source-language"><option value="en">Inglés</option><option value="pt">Portugués</option><option value="fr">Francés</option><option value="it">Italiano</option><option value="de">Alemán</option></select>
+<p class="fine">Al traducir se envía el texto a MyMemory. Tu grabación se queda aquí. Podrás revisar el resultado antes de usarlo.</p>
+<button type="button" id="translate">Traducir mi texto</button><button id="cancel-translate" type="button" hidden>Cancelar</button>
+<p id="translation-status" class="notice" role="status"></p>
+<div id="translation-review" hidden><label for="translation">Revisa la traducción</label><textarea id="translation" lang="es"></textarea>
+<button type="button" id="use-translation">Usar esta traducción</button></div>
+</details>
 <button type="button" class="primary" id="generate"><span class="play"></span><span id="gen-label">Generar con mi voz</span></button>
 <button type="button" class="secondary" id="pause" hidden>Pausar al terminar este fragmento</button>
 <div class="notice" id="status" role="status" aria-live="polite"></div>
@@ -33,7 +42,7 @@
 <p id="output-info">Aquí podrás escuchar y guardar el audio.</p><progress hidden id="progress" value="0" max="1" aria-label="Progreso de generación"></progress>
 <div id="player" hidden><audio controls id="output" playsinline preload="metadata" aria-label="Escuchar narración"></audio>
 <div class="controls"><button id="prev" class="secondary" type="button" aria-label="Fragmento anterior">Anterior</button><span id="position"></span><button id="next" class="secondary" type="button" aria-label="Fragmento siguiente">Siguiente</button></div>
-<button class="export" id="export" type="button">Guardar audio WAV</button><div id="downloads" aria-live="polite"></div></div></section>
+<button class="export" id="mp3" type="button">Preparar MP3</button> <button class="secondary" id="export" type="button">Guardar audio WAV</button><div id="downloads" aria-live="polite"></div></div></section>
 </main>
 <footer class="shell"><span>Voz Continua</span><a href="https://github.com/prensainternacionalindependien-lgtm/voz-continua" target="_blank" rel="noopener">Código en GitHub</a></footer>
 <script type="module" src="./studio.js"></script>

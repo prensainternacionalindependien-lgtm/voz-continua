@@ -2,6 +2,8 @@ import {splitText, RATE, waveHeader, encodeWave, waveFloats, decodeMono} from '.
 import {readPart,getJob,load,save,startJob,savePart} from './store.js';
 import {openCloud} from './chatterbox.js';
 
+import {translateToSpanish} from './translate.js';
+
 const el = id => document.getElementById(id);
 const script = el('script'), engine = el('engine'), output = el('output');
 const nf = new Intl.NumberFormat('es-US');
@@ -38,6 +40,8 @@ function matches() {
 }
 function controls() {
   const lock=busy || changingSample || !!recorded;
+  el('translate').disabled=busy || translating || !script.value.trim();
+  el('use-translation').disabled=busy || translating || !el('translation').value.trim();
   el('count').textContent=nf.format(script.value.length)+' caracteres';
   el('generate').disabled=!ready || lock || !voice || !script.value.trim() || (matches()&&job.done===job.total);
   el('gen-label').textContent=busy?'Generando…':matches()&&job.done<job.total?'Continuar narración':'Generar con mi voz';
@@ -116,8 +120,65 @@ async function playPart(index,autoplay=false) {
 output.onended=()=>{if(job && currentPart+1<job.done)playPart(currentPart+1,true).catch(e=>notice('status',errorText(e),true));};
 el('prev').onclick=()=>playPart(currentPart-1,!output.paused);
 el('next').onclick=()=>playPart(currentPart+1,!output.paused);
+let translating=false, translationController, translationSource;
+el('translation').oninput=controls;
+el('translate').onclick=async()=>{
+  const source=script.value;
+  if(!source.trim() || translating)return;
+  translating=true;translationController=new AbortController();
+  const timeout=setTimeout(()=>translationController.abort(),240000);
+  el('translation-review').hidden=true;el('cancel-translate').hidden=false;controls();
+  try {
+    const text=await translateToSpanish(source,el('source-language').value,translationController.signal,
+      message=>notice('translation-status',message));
+    translationSource=source;el('translation').value=text;el('translation-review').hidden=false;
+    notice('translation-status','Revisa el español y corrige lo que quieras.');
+  }catch(e){notice('translation-status',e.name==='AbortError'?'Traducción interrumpida. Tu original sigue aquí.':errorText(e),true);}
+  finally{clearTimeout(timeout);translating=false;el('cancel-translate').hidden=true;controls();}
+};
+el('cancel-translate').onclick=()=>translationController?.abort();
+el('use-translation').onclick=()=>{
+  if(script.value!==translationSource){notice('translation-status','El original cambió. Vuelve a traducir para usar la versión actual.',true);return;}
+  script.value=el('translation').value;script.dispatchEvent(new Event('input'));
+  el('translation-review').hidden=true;el('use-translation').closest('details').open=false;
+  notice('status','Traducción lista para narrar.');script.focus();
+};
+el('mp3').onclick=async()=>{
+  if(!job?.done)return;
+  const button=el('mp3'), snapshot=job;
+  let worker;
+  button.disabled=true;el('export').disabled=true;clearDownloads();
+  function encode(message){
+    return new Promise((resolve,reject)=>{
+      worker.onerror=()=>reject(Error('No se pudo iniciar el codificador MP3. Recarga la página y vuelve a intentar.'));
+      worker.onmessage=({data})=>data?.error?reject(Error(data.error)):resolve(data);
+      worker.postMessage(message,message instanceof ArrayBuffer?[message]:[]);
+    });
+  }
+  try {
+    worker=new Worker(new URL('./mp3-worker.js',import.meta.url));
+    let blocks=[],volume=0,size=0;
+    for(let i=0;i<snapshot.done;i++){
+      button.textContent='Preparando MP3 · '+(i+1)+' de '+snapshot.done;
+      const part=await readPart(snapshot,i);
+      if(!part || job.id!==snapshot.id)throw Error('La narración cambió. Vuelve a preparar el MP3.');
+      const encoded=await encode(await part.slice(44).arrayBuffer());
+      blocks.push(encoded);size+=encoded.size;
+      if(i===snapshot.done-1 || size>=64*1024*1024){
+        blocks.push(await encode('finish'));
+        if(job.id!==snapshot.id)throw Error('La narración cambió. Vuelve a preparar el MP3.');
+        const blob=new Blob(blocks,{type:'audio/mpeg'}),link=document.createElement('a');
+        link.href=URL.createObjectURL(blob);exportURLs.push(link.href);volume++;
+        link.download='mi-narracion'+(volume>1?'-'+volume:'')+'.mp3';
+        link.textContent='Descargar MP3'+(volume>1?' · parte '+volume:'')+' · '+Math.max(1,Math.round(blob.size/1024))+' KB';
+        el('downloads').append(link);blocks=[];size=0;
+      }
+    }
+  }catch(e){clearDownloads();notice('status',errorText(e),true);}
+  finally{worker?.terminate();button.disabled=false;el('export').disabled=false;button.textContent='Preparar MP3';}
+};
 el('export').onclick=async()=>{
-  const button=el('export');button.disabled=true;clearDownloads();
+  const button=el('export');button.disabled=true;el('mp3').disabled=true;clearDownloads();
   try{
     const {id,done}=job;let blocks=[],bytes=0,volume=0;
     function finish(){
@@ -133,7 +194,7 @@ el('export').onclick=async()=>{
       blocks.push(part.slice(44));bytes+=part.size-44;
     }
     finish();
-  }catch(e){clearDownloads();notice('status',errorText(e),true);}finally{button.disabled=false;}
+  }catch(e){clearDownloads();notice('status',errorText(e),true);}finally{button.disabled=false;el('mp3').disabled=false;}
 };
 script.oninput=()=>{controls();clearTimeout(draftTimer);draftTimer=setTimeout(()=>save('draft',script.value).catch(e=>notice('status',errorText(e),true)),250);};
 engine.onchange=()=>{controls();save('engine',engine.value).catch(e=>notice('status',errorText(e),true));};

@@ -4,7 +4,7 @@
  */
 const MODEL_BASE = "https://huggingface.co/spaces/KevinAHM/pocket-tts-web/resolve/d0c0c79b7712256a32d691c67f20b8ae2e020d00/onnx/spanish/";
 const ORT_BASE = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
-const LSD_STEPS = 1;
+const LSD_STEPS = 3;
 const MAX_FRAMES = 500;
 const CHUNK_GAP_SEC = 0.25;
 const RESET_FLOW_STATE_EACH_CHUNK = true;
@@ -177,7 +177,14 @@ async function encodeVoiceAudio(audioData) {
 }
 
 function prepareTextPrompt(text) {
-    let prompt = text.trim();
+    let prompt = text.trim()
+        .replace(/\bDra\.(?=\s|$)/gu, "doctora")
+        .replace(/\bDr\.(?=\s|$)/gu, "doctor")
+        .replace(/\bSra\.(?=\s|$)/gu, "señora")
+        .replace(/\bSr\.(?=\s|$)/gu, "señor")
+        .replace(/\bUd\.(?=\s|$)/gu, "usted")
+        .replace(/\bUds\.(?=\s|$)/gu, "ustedes")
+        .replace(/\bp\.\s*ej\.(?=\s|$)/giu, "por ejemplo");
     if (!prompt) {
         return { text: "", framesAfterEos: 1 };
     }
