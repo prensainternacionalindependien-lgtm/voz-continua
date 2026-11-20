@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17221d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="Graba tu voz y narra textos largos en español desde tu iPhone.">
+<title>Voz Continua · Estudio de voz</title>
+<link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="./icon.png">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./studio.css">
+</head>
+<body>
+<header><div class="shell mast"><a class="mark" href="./" aria-label="Voz Continua, inicio"><img src="./icon.svg" alt="">Voz Continua</a><span class="lang" lang="es">Español</span></div></header>
+<main class="shell">
+<div class="intro"><h1>Estudio de voz</h1><p>Graba tu voz y úsala para leer lo que escribas.</p></div>
+<div class="columns">
+<section class="card sample"><h2>Tu voz</h2><p>Graba entre 5 y 12 segundos en un lugar tranquilo.</p>
+<div class="monitor"><canvas id="wave" width="640" height="160" aria-hidden="true"></canvas><div><span id="sample-state">Sin grabación</span><b id="clock">00:00</b></div></div>
+<div class="twobtn"><button type="button" class="record" id="record"><span class="rdot"></span><span id="rec-label">Grabar</span></button><label class="button upload" for="upload">Subir audio</label><input class="file" type="file" id="upload" accept="audio/*,.wav,.m4a,.mp3,.aac,.ogg,.webm,.aif,.aiff"></div>
+<audio hidden id="sample-audio" controls preload="metadata" aria-label="Escucha tu muestra"></audio>
+<p class="notice" id="sample-message" role="status"></p>
+<label class="field" for="engine">Dónde generar la voz</label><select id="engine"><option value="local">En mi dispositivo</option><option value="cloud">En línea · Chatterbox</option></select>
+<p class="fine" id="engine-info">El modelo se descarga la primera vez. Tu voz y tu texto se procesan aquí.</p>
+</section>
+<section class="card script"><div class="titleline"><h2><label for="script">Tu texto</label></h2><span id="count">0 caracteres</span></div>
+<p>Pega tu texto completo. La app se encarga de dividirlo.</p><textarea id="script" placeholder="Escribe o pega aquí lo que quieres escuchar…" spellcheck="true" lang="es"></textarea>
+<button type="button" class="primary" id="generate"><span class="play"></span><span id="gen-label">Generar con mi voz</span></button>
+<button type="button" class="secondary" id="pause" hidden>Pausar al terminar este fragmento</button>
+<div class="notice" id="status" role="status" aria-live="polite"></div>
+</section></div>
+<section class="card result"><div class="titleline"><h2>Tu narración</h2><span id="progress-label"></span></div>
+<p id="output-info">Aquí podrás escuchar y guardar el audio.</p><progress hidden id="progress" value="0" max="1" aria-label="Progreso de generación"></progress>
+<div id="player" hidden><audio controls id="output" playsinline preload="metadata" aria-label="Escuchar narración"></audio>
+<div class="controls"><button id="prev" class="secondary" type="button" aria-label="Fragmento anterior">Anterior</button><span id="position"></span><button id="next" class="secondary" type="button" aria-label="Fragmento siguiente">Siguiente</button></div>
+<button class="export" id="export" type="button">Guardar audio WAV</button><div id="downloads" aria-live="polite"></div></div></section>
+</main>
+<footer class="shell"><span>Voz Continua</span><a href="https://github.com/prensainternacionalindependien-lgtm/voz-continua" target="_blank" rel="noopener">Código en GitHub</a></footer>
+<script type="module" src="./studio.js"></script>
+</body></html>
