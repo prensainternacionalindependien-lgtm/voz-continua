@@ -4,7 +4,7 @@
  */
 const MODEL_BASE = "https://huggingface.co/spaces/KevinAHM/pocket-tts-web/resolve/d0c0c79b7712256a32d691c67f20b8ae2e020d00/onnx/spanish/";
 const ORT_BASE = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
-const LSD_STEPS = 3;
+const LSD_STEPS = 1;
 const MAX_FRAMES = 500;
 const CHUNK_GAP_SEC = 0.25;
 const RESET_FLOW_STATE_EACH_CHUNK = true;
@@ -195,7 +195,7 @@ function prepareTextPrompt(text) {
     }
 
     const wordCount = prompt.split(/\s+/).filter(Boolean).length;
-    let framesAfterEos = wordCount <= 4 ? 3 : 1;
+    let framesAfterEos = wordCount <= 4 ? 5 : 3;
     if (bundleMetadata.model_recommended_frames_after_eos != null) {
         framesAfterEos = Number(bundleMetadata.model_recommended_frames_after_eos);
     }
@@ -394,6 +394,7 @@ async function runGenerationPipeline(voiceName, chunks, framesAfterEos) {
 
         const chunkText = chunks[chunkIdx];
         const tokenIds = tokenizerProcessor.encodeIds(chunkText);
+        const minimumFrames = Math.min(60, Math.floor(chunkText.trim().length / 3));
         const textInput = createTensor(
             "int64",
             BigInt64Array.from(tokenIds.map((token) => BigInt(token))),
@@ -432,13 +433,14 @@ async function runGenerationPipeline(voiceName, chunks, framesAfterEos) {
 
             const conditioning = arResult.conditioning;
             const eosLogit = arResult.eos_logit.data[0];
-            const isEos = eosLogit > -4.0;
+            // An early stop on the first frames can turn a full phrase into a short click.
+            const isEos = step >= minimumFrames && eosLogit > -4.0;
             if (isEos && eosStep == null) {
                 eosStep = step;
             }
             const shouldStop = eosStep != null && step >= eosStep + framesAfterEos;
 
-            const temperature = 0.7;
+            const temperature = 0.3;
             const std = Math.sqrt(temperature);
             const latentData = new Float32Array(currentLatentDim);
             for (let i = 0; i < currentLatentDim; i++) {
