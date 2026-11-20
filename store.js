@@ -19,8 +19,20 @@ export async function write(stores,changes) {
 }
 export const save=(key,value)=>write(['settings'], tx=>tx.objectStore('settings').put(value,key));
 export const load=(key)=>read('settings',key);
+export async function getJob() {
+  const [job,text]=await Promise.all([load('job'),load('jobText')]);
+  if(job && job.text===undefined)job.text=text;
+  return job;
+}
+export function readPart(job,index) {
+  return read('parts',job.keyed ? [job.id,index] : index);
+}
 export function startJob(job) {
-  return write(['settings','parts'], tx=>{tx.objectStore('settings').put(job,'job');tx.objectStore('parts').clear();});
+  const {text,...progress}=job;
+  return write(['settings','parts'],tx=>{
+    const settings=tx.objectStore('settings');
+    settings.put(text,'jobText');settings.put(progress,'job');tx.objectStore('parts').clear();
+  });
 }
 export function savePart(job,index,audio) {
   return write(['settings','parts'],tx=>{
@@ -28,7 +40,10 @@ export function savePart(job,index,audio) {
     const get=settings.get('job');
     get.onsuccess=()=>{
       if(get.result?.id!==job.id || get.result.done!==index){tx.abort();return;}
-      tx.objectStore('parts').put(audio,index);settings.put(job,'job');
+      const {text,...progress}=job;
+      tx.objectStore('parts').put(audio,job.keyed ? [job.id,index] : index);
+      if(get.result.text!==undefined)settings.put(text,'jobText');
+      settings.put(progress,'job');
     };
   });
 }

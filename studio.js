@@ -1,5 +1,5 @@
 import {splitText, RATE, waveHeader, encodeWave, waveFloats, decodeMono} from './audio.js';
-import {read,load,save,startJob,savePart} from './store.js';
+import {readPart,getJob,load,save,startJob,savePart} from './store.js';
 import {openCloud} from './chatterbox.js';
 
 const el = id => document.getElementById(id);
@@ -54,11 +54,12 @@ function controls() {
     el('progress-label').textContent=nf.format(job.done)+' de '+nf.format(job.total)+' fragmentos';
     el('output-info').textContent=job.done===job.total?'Narración completa. Puedes escucharla o guardarla.':job.done?'Los fragmentos terminados ya se pueden escuchar y guardar.':'El primer fragmento aparecerá aquí.';
   }
+  if(job?.done && !busy && !matches())el('output-info').textContent='Este es tu audio anterior. Guárdalo antes de generar otra narración.';
   el('prev').disabled=currentPart<=0;el('next').disabled=!job || currentPart>=job.done-1;
   el('position').textContent=currentPart>=0?'Fragmento '+nf.format(currentPart+1):'';
 }
 async function showVoice() {
-  if(!voice){wave();return;}
+  if(!voice){el('sample-state').textContent='Sin grabación';el('clock').textContent='00:00';wave();return;}
   el('sample-state').textContent='Tu muestra';el('clock').textContent=duration(voice.seconds);
   if(sampleURL)URL.revokeObjectURL(sampleURL);sampleURL=URL.createObjectURL(voice.wav);
   el('sample-audio').src=sampleURL;el('sample-audio').hidden=false;
@@ -106,7 +107,7 @@ function clearDownloads() {
 }
 async function playPart(index,autoplay=false) {
   if(!job || index<0 || index>=job.done)return;
-  const version=++playVersion, blob=await read('parts',index);
+  const version=++playVersion, blob=await readPart(job,index);
   if(version!==playVersion || !blob)return;
   output.pause();if(playingURL)URL.revokeObjectURL(playingURL);
   playingURL=URL.createObjectURL(blob);output.src=playingURL;currentPart=index;controls();
@@ -126,7 +127,7 @@ el('export').onclick=async()=>{
       blocks=[];bytes=0;
     }
     for(let i=0;i<done;i++){
-      const part=await read('parts',i);
+      const part=await readPart(job,i);
       if(!part || job.id!==id)throw Error('La narración cambió. Vuelve a preparar la descarga.');
       if(bytes+part.size-44>128*1024*1024)finish();
       blocks.push(part.slice(44));bytes+=part.size-44;
@@ -143,7 +144,7 @@ async function run(lock) {
   const status=t=>notice('status',t);
   try {
     const text=script.value.trim(), parts=splitText(text);
-    const old=await load('job');job=old;
+    const old=await getJob();job=old;
     if(!voice || !parts.length)return;
     // El audio anterior sigue disponible si el nuevo motor no llega a iniciar.
     if(engine.value==='local'){
@@ -154,7 +155,7 @@ async function run(lock) {
     }else motor=await openCloud(voice.wav,status);
     if(!matches()){
       if(stopRequested)return;
-      const nextJob={id:crypto.randomUUID(),voice:voice.id,text,engine:engine.value,total:parts.length,done:0};
+      const nextJob={keyed:true,id:crypto.randomUUID(),voice:voice.id,text,engine:engine.value,total:parts.length,done:0};
       await startJob(nextJob);job=nextJob;++playVersion;currentPart=-1;output.pause();output.removeAttribute('src');output.load();
       if(playingURL)URL.revokeObjectURL(playingURL);playingURL='';clearDownloads();
     }
@@ -181,7 +182,7 @@ el('generate').onclick=()=>{
 async function init() {
   wave();controls();
   try {
-    const [v,j,text,mode]=await Promise.all([load('voice'),load('job'),load('draft'),load('engine')]);
+    const [v,j,text,mode]=await Promise.all([load('voice'),getJob(),load('draft'),load('engine')]);
     voice=v;job=j;script.value=text??j?.text??'';engine.value=mode==='cloud'?'cloud':'local';await showVoice();
     if(job?.done)await playPart(0);ready=true;
     if(job && job.done<job.total)notice('status','Tu progreso está guardado. Toca Continuar narración para seguir.');

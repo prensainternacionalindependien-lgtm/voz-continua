@@ -1,5 +1,7 @@
 # Voz Continua
 
+[Abrir Voz Continua en el iPhone](https://prensainternacionalindependien-lgtm.github.io/voz-continua/)
+
 Aplicación web en español para iPhone. Graba una muestra propia, pega el texto entero y pulsa **Generar con mi voz**. La app sintetiza y guarda el resultado por fragmentos. El campo de texto no tiene un máximo configurado. El tiempo de generación, la memoria y el espacio disponible sí limitan el tamaño práctico de una narración.
 
 **En mi dispositivo** utiliza Pocket TTS en español. El primer uso descarga unos 160 MB de modelos y dependencias. El navegador procesa la grabación y el texto localmente. No hay cuenta, créditos ni clave de API. Mantén Safari abierto durante la generación. Si se interrumpe, la app permite continuar desde el último fragmento terminado en ese navegador.
